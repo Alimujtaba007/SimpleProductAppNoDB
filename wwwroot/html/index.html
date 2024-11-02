@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Product List</title>
+</head>
+<body>
+    <h2>Product List</h2>
+    <table id="productTable" border="1">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <br />
+
+    <h3>Add New Product</h3>
+    <form id="addProductForm">
+        <label>Name: <input type="text" id="productName" /></label><br />
+        <label>Price: <input type="number" id="productPrice" /></label><br />
+        <label>Quantity: <input type="number" id="productQuantity" /></label><br />
+        <button type="button" onclick="addProduct()">Add Product</button>
+    </form>
+
+    <br />
+
+    <h3>Edit Product</h3>
+    <form id="editProductForm" style="display:none;">
+        <input type="hidden" id="editProductId" />
+        <label>Name: <input type="text" id="editProductName" /></label><br />
+        <label>Price: <input type="number" id="editProductPrice" /></label><br />
+        <label>Quantity: <input type="number" id="editProductQuantity" /></label><br />
+        <button type="button" onclick="updateProduct()">Update Product</button>
+    </form>
+
+    <script>
+        async function fetchProducts() {
+            const response = await fetch('/product/getproducts');
+            const products = await response.json();
+            const tbody = document.querySelector("#productTable tbody");
+            tbody.innerHTML = "";
+            products.forEach(product => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${product.name}</td>
+                    <td>${product.price}</td>
+                    <td>${product.quantity}</td>
+                    <td>
+                        <button onclick="showEditForm(${product.id})">Edit</button>
+                        <button onclick="deleteProduct(${product.id})">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        async function addProduct() {
+            const product = {
+                name: document.getElementById("productName").value,
+                price: parseFloat(document.getElementById("productPrice").value),
+                quantity: parseInt(document.getElementById("productQuantity").value, 10)
+            };
+            await fetch('/product/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(product)
+            });
+            fetchProducts();
+        }
+        
+        function showEditForm(id) {
+            const product = Array.from(document.querySelectorAll("#productTable tbody tr"))
+                .find(row => row.querySelector("button").onclick.toString().includes(id));
+            if (product) {
+                document.getElementById("editProductId").value = id;
+                document.getElementById("editProductName").value = product.cells[0].textContent;
+                document.getElementById("editProductPrice").value = parseFloat(product.cells[1].textContent);
+                document.getElementById("editProductQuantity").value = parseInt(product.cells[2].textContent, 10);
+                document.getElementById("editProductForm").style.display = "block";
+            }
+        }
+
+        async function updateProduct() {
+            const product = {
+                id: parseInt(document.getElementById("editProductId").value, 10),
+                name: document.getElementById("editProductName").value,
+                price: parseFloat(document.getElementById("editProductPrice").value),
+                quantity: parseInt(document.getElementById("editProductQuantity").value, 10)
+            };
+            await fetch('/product/edit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(product)
+            });
+            document.getElementById("editProductForm").style.display = "none";
+            fetchProducts();
+        }
+
+        async function deleteProduct(id) {
+            await fetch(`/product/delete/${id}`, { method: 'POST' });
+            fetchProducts();
+        }
+
+        document.addEventListener("DOMContentLoaded", fetchProducts);
+    </script>
+</body>
+</html>
